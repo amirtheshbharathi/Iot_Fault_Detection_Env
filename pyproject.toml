@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "iot-fault-diagnosis-env"
+version = "1.0.0"
+description = "IoT Fault Diagnosis OpenEnv Environment"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.104.1",
+    "uvicorn==0.24.0.post1",
+    "pydantic==2.5.3",
+    "numpy==1.26.2",
+    "requests==2.31.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "openenv-core>=0.2.0",
+]
+
+[project.scripts]
+server = "server.app:main"
+
+[tool.openenv]
+name = "iot_fault_diagnosis_env"
+version = "1.0.0"
