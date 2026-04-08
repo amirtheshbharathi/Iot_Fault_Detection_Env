@@ -1,3 +1,15 @@
+---
+title: IoT Fault Diagnosis OpenEnv
+emoji: 🏭
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+license: mit
+tags:
+  - openenv
+---
+
 # IoT Fault Diagnosis — OpenEnv Environment
 
 ## Description & Motivation
