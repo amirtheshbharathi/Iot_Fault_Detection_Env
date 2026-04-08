@@ -50,20 +50,8 @@ Two action types:
 
 - `request_data` when time_ratio < 0.8: `+0.01` (incremental progress reward)
 - `request_data` when time_ratio >= 0.8: `-0.05` (penalty for over-requesting)
-- `diagnose`: grader score in `[0.0, 1.0]` based on keyword overlap with ground truth across diagnosis, root cause, recommended action, confidence calibration, and explanation
-- High confidence + wrong answer penalty: `-0.2` applied when `confidence >= 0.8` and grader score `< 0.3`
-
-## Grading Criteria
-
-| Component | Weight | Method |
-|---|---|---|
-| Diagnosis correctness | 40% | Synonym-aware keyword overlap vs ground truth |
-| Root cause correctness | 30% | Synonym-aware keyword overlap |
-| Recommended action | 10% | Keyword overlap |
-| Confidence calibration | 10% | `1 - abs(correctness - confidence)` |
-| Explanation quality | 10% | Keyword overlap vs diagnosis + root cause |
-
-Grading is deterministic and reproducible (fixed seeds, keyword matching).
+- `diagnose`: grader score in `[0.0, 1.0]` based on keyword overlap with ground truth
+- High confidence + wrong answer: `-0.2` penalty
 
 ## Baseline Scores
 
