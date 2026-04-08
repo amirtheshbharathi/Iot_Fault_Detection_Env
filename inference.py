@@ -7,7 +7,7 @@ from openai import OpenAI
 
 load_dotenv()  # reads .env file into os.environ
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://amirthesh29-iot-fault-detection-env.hf.space")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://router.huggingface.co/v1")
