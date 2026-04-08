@@ -7,10 +7,10 @@ from openai import OpenAI
 
 load_dotenv()  # reads .env file into os.environ
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://amirthesh29-iot-fault-detection-env.hf.space")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")  # LLM proxy endpoint
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
-LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")  # their injected key or fallback
+ENV_URL = os.getenv("ENV_URL", "https://amirthesh29-iot-fault-detection-env.hf.space")  # env server
 BENCHMARK = "iot_fault_diagnosis_env"
 MAX_STEPS = 15
 
@@ -127,7 +127,7 @@ def run_task(client: OpenAI, task: str) -> None:
 
     try:
         # Reset — POST as required by the validator
-        res = requests.post(f"{API_BASE_URL}/reset", params={"task_name": task}, json={})
+        res = requests.post(f"{ENV_URL}/reset", params={"task_name": task}, json={})
         res.raise_for_status()
         obs = res.json()
 
@@ -141,7 +141,7 @@ def run_task(client: OpenAI, task: str) -> None:
             action_str = json.dumps(action_dict)
 
             try:
-                step_res = requests.post(f"{API_BASE_URL}/step", json=action_dict)
+                step_res = requests.post(f"{ENV_URL}/step", json=action_dict)
                 step_res.raise_for_status()
                 step_data = step_res.json()
 
@@ -175,8 +175,8 @@ def run_task(client: OpenAI, task: str) -> None:
 
 def main() -> None:
     client = OpenAI(
-        base_url=LLM_BASE_URL,
-        api_key=HF_TOKEN,
+        base_url=API_BASE_URL,
+        api_key=API_KEY,
     )
 
     for task in ["easy", "medium", "hard"]:
