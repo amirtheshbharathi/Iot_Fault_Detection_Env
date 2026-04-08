@@ -60,9 +60,9 @@ class IoTEnvironment:
             grader_result = evaluate_action(action, self.state)
             
             reward_value = grader_result.total_score
-            # Unsafe penalty heuristic: if confidence is high but score is very low
+            # Penalize overconfident wrong answers but keep reward in [0,1]
             if action.confidence and action.confidence >= 0.8 and reward_value < 0.3:
-                reward_value -= 0.2
+                reward_value = max(0.0, reward_value - 0.2)
                 
             info["breakdown"] = grader_result.breakdown
             done = True
