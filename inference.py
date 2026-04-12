@@ -97,9 +97,10 @@ def _force_diagnose(client: OpenAI, obs: dict, sensor_summary: str, extracted_th
             action = json.loads(match.group(1).strip())
             action["action_type"] = "diagnose"
             try:
-                action["confidence"] = float(action.get("confidence", 0.6))
+                conf = float(action.get("confidence", 0.7))
+                action["confidence"] = min(0.98, max(0.02, conf))
             except (ValueError, TypeError):
-                action["confidence"] = 0.6
+                action["confidence"] = 0.7
             # Fill missing fields
             diag = action.get("diagnosis", "").lower()
             if not action.get("root_cause"):
@@ -147,8 +148,8 @@ def _all_within_normal(obs: dict) -> bool:
     sensor_data = obs.get("sensor_data", {})
     for sensor, values in sensor_data.items():
         clean = [v for v in values if v is not None]
-        if len(clean) < 10:
-            continue
+        if len(clean) < 15:  # need enough data points
+            return False
         third = max(1, len(clean) // 3)
         trend = abs(sum(clean[-third:]) / third - sum(clean[:third]) / third)
         mn = sum(clean) / len(clean)
@@ -271,12 +272,14 @@ Respond strictly following the requested format."""
                 else:
                     sanitized["action_type"] = "request_data"
 
-            # Coerce confidence
+            # Coerce confidence — keep model's value but clamp to valid range (exclusive)
             if sanitized.get("action_type") == "diagnose":
                 try:
-                    sanitized["confidence"] = float(sanitized.get("confidence", 0.6))
+                    conf = float(sanitized.get("confidence", 0.7))
+                    # Clamp strictly within (0, 1) — never exactly 0.0 or 1.0
+                    sanitized["confidence"] = min(0.98, max(0.02, conf))
                 except (ValueError, TypeError):
-                    sanitized["confidence"] = 0.6
+                    sanitized["confidence"] = 0.7
 
                 diag = sanitized.get("diagnosis", "").lower()
 
