@@ -61,7 +61,7 @@ def evaluate_action_fallback(action: Action, state: EnvironmentState) -> GraderR
         state.true_diagnosis + " " + state.true_root_cause
     ) * 0.1
 
-    total_score = min(1.0, max(0.0, diag_score + root_score + rec_score + conf_score + exp_score))
+    total_score = min(0.99, max(0.01, diag_score + root_score + rec_score + conf_score + exp_score))
 
     return GraderResult(
         total_score=total_score,
@@ -137,9 +137,11 @@ Return a single JSON object strictly matching this format (no code blocks):
         # Hard Filter False Alarm
         diagnosis_text = (action.diagnosis or "").lower()
         if state.task_name == "normal" and "normal" not in diagnosis_text:
-            raw_llm_score = 0.0
+            raw_llm_score = 0.01  # strictly > 0
             breakdown["false_alarm_penalty"] = 1.0
-            
+
+        # Clamp strictly within (0, 1)
+        raw_llm_score = min(0.99, max(0.01, raw_llm_score))
         base_result = GraderResult(total_score=raw_llm_score, breakdown=breakdown)
     except Exception as e:
         print(f"[WARNING]: LLM Judge unavailable ({e}), using keyword fallback.", flush=True)
@@ -147,7 +149,7 @@ Return a single JSON object strictly matching this format (no code blocks):
         
     # Apply resource penalty (-0.005 per unit)
     energy_penalty = round(state.energy_consumption * 0.005, 3)
-    final_score = max(0.0, base_result.total_score - energy_penalty)
+    final_score = min(0.99, max(0.01, base_result.total_score - energy_penalty))
     base_result.breakdown["energy_penalty"] = -energy_penalty
     base_result.total_score = final_score
         

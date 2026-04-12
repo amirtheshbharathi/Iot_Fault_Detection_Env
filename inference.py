@@ -385,11 +385,11 @@ def run_task(client: OpenAI, task: str, config: dict) -> None:
             steps_taken = step
             log_step(step=step, action_dict=action_dict, reward=reward, done=done, error=error, obs=obs)
 
-        score = 0.0
+        score = 0.01
         for r in rewards:
             if r > 0.05:
                 score = r
-        score = min(max(score, 0.0), 1.0)
+        score = min(0.99, max(0.01, score))
         success = score >= 0.1
 
     except Exception as e:
