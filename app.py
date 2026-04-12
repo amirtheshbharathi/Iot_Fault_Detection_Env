@@ -2,6 +2,9 @@ import subprocess
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, List
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from env import IoTEnvironment
 from models import Action, Observation, EnvironmentState, GraderResult

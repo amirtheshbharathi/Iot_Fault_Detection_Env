@@ -22,14 +22,23 @@ def generate_hard_task() -> EnvironmentState:
         if np.random.rand() < 0.05:
             vibration[i] += np.random.choice([5.0, -5.0]) # Occasional highly noisy spike
             
-    # Ambiguous fault: temperature slowly rises, vibration suddenly stops dropping (becomes constant 0)
-    # Could be a sensor failure or a seized rotor.
-    # We will define it as a seized rotor which caused sensor line to snap (vibration -> 0.0 exactly).
-    for i in range(50, timesteps):
-        if temperature[i] is not None:
-            temperature[i] += 0.5 * (i - 50)
-    for i in range(60, timesteps):
-        vibration[i] = 0.0
+    # Intermittent electrical fault: Random noise spikes on vibration that vanish quickly
+    for i in range(timesteps):
+        if np.random.rand() < 0.10:
+            if vibration[i] is not None:
+                vibration[i] += 15.0  # Massive spike
+
+    # Generate Gaussian noise overlay using fixed seed (reproducibility)
+    rng = np.random.default_rng(seed=42)
+    noisy_temperature = [t + rng.normal(0, 4.0) if t is not None else None for t in temperature]
+    noisy_pressure = [p + rng.normal(0, 8.0) if p is not None else None for p in pressure]
+    noisy_vibration = [v + rng.normal(0, 1.5) if v is not None else None for v in vibration]
+    
+    noisy_sensor_data = {
+        "temperature": noisy_temperature,
+        "pressure": noisy_pressure,
+        "vibration": noisy_vibration
+    }
 
     return EnvironmentState(
         task_name="hard",
@@ -40,14 +49,16 @@ def generate_hard_task() -> EnvironmentState:
         },
         system_metadata={
             "machine_type": "Centrifugal Compressor",
-            "location": "Plant C, Exterior Unit"
+            "location": "Plant C, Exterior Unit",
+            "normal_ranges": "temperature: 65-85C, pressure: 180-220, vibration: 2.0-3.5 (any single spike above 7.0 = electrical fault, do not dismiss as noise)"
         },
-        true_diagnosis="Rotor seizure with severed vibration sensor line",
-        true_root_cause="Loss of lubrication leading to mechanical lock",
-        true_recommended_action="Emergency stop, inspect lubrication lines and replace rotor",
-        current_time_index=20,  # Start before anomaly window (vibration zeroes at index 60)
+        true_diagnosis="Intermittent electrical fault in vibration sensor",
+        true_root_cause="Loose wire connection",
+        true_recommended_action="Inspect and secure vibration sensor wiring",
+        current_time_index=10,  # Start early so agent can observe vibration spikes across the window
         max_time_index=timesteps,
         history=[],
         is_done=False,
-        total_reward=0.0
+        total_reward=0.0,
+        noisy_sensor_data=noisy_sensor_data
     )

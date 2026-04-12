@@ -14,13 +14,9 @@ def generate_medium_task() -> EnvironmentState:
     pressure = np.random.normal(loc=120.0, scale=2.0, size=timesteps).tolist()
     vibration = np.random.normal(loc=1.2, scale=0.15, size=timesteps).tolist()
 
-    # Step 25: Vibration starts increasing
-    for i in range(25, timesteps):
-        vibration[i] += 0.05 * (i - 25) # gradual increase
-    
-    # Step 35: Pressure drops due to bearing degradation causing seal leak
-    for i in range(35, timesteps):
-        pressure[i] -= 1.0 * (i - 35) # gradual decrease
+    # Sensor Drift: Slowly bias the pressure downward starting from step 10
+    for i in range(10, timesteps):
+        pressure[i] -= 0.5 * (i - 10) # linear downward drift (sensor bias)
 
     return EnvironmentState(
         task_name="medium",
@@ -31,12 +27,13 @@ def generate_medium_task() -> EnvironmentState:
         },
         system_metadata={
             "machine_type": "Gas Turbine",
-            "location": "Plant B, Generator Room"
+            "location": "Plant B, Generator Room",
+            "normal_ranges": "temperature: 57-63C, pressure: 115-125, vibration: 0.9-1.5"
         },
-        true_diagnosis="Bearing degradation causing seal failure",
-        true_root_cause="Bearing wear over time",
-        true_recommended_action="Shut down immediately and replace bearing/seal assembly",
-        current_time_index=20,
+        true_diagnosis="Pressure sensor drift",
+        true_root_cause="Sensor calibration decay over time",
+        true_recommended_action="Recalibrate pressure sensor",
+        current_time_index=15,  # Start early enough to observe the pressure drift from step 10
         max_time_index=timesteps,
         history=[],
         is_done=False,

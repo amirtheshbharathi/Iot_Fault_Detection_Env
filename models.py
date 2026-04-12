@@ -9,7 +9,10 @@ class Observation(BaseModel):
     history: List[Dict[str, Any]]
 
 class Action(BaseModel):
-    action_type: str = Field(..., description="Must be 'diagnose' or 'request_data'")
+    action_type: str = Field(..., description="Must be 'diagnose', 'request_data', or 'tool_call'")
+    tool_call: Optional[str] = None
+    tool_params: Optional[Dict[str, Any]] = None
+    thought: Optional[str] = None
     diagnosis: Optional[str] = None
     root_cause: Optional[str] = None
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
@@ -18,8 +21,8 @@ class Action(BaseModel):
 
     @validator("action_type")
     def validate_action_type(cls, v):
-        if v not in ["diagnose", "request_data"]:
-            raise ValueError("action_type must be 'diagnose' or 'request_data'")
+        if v not in ["diagnose", "request_data", "tool_call"]:
+            raise ValueError("action_type must be 'diagnose', 'request_data', or 'tool_call'")
         return v
 
 class Reward(BaseModel):
@@ -46,3 +49,9 @@ class EnvironmentState(BaseModel):
     history: List[Dict[str, Any]]
     is_done: bool
     total_reward: float
+    # SoA Extensions
+    energy_consumption: float = 0.0
+    latency: float = 0.0
+    is_denoised: bool = False
+    current_sampling_rate: int = 1000
+    noisy_sensor_data: Optional[Dict[str, List[Optional[float]]]] = None

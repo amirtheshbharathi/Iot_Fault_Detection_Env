@@ -12,8 +12,12 @@ def generate_easy_task() -> EnvironmentState:
     pressure = np.random.normal(loc=100.0, scale=1.0, size=50).tolist()
     vibration = np.random.normal(loc=0.5, scale=0.1, size=50).tolist()
 
-    # Introduce a massive temperature spike at step 30
-    for i in range(30, 40):
+    # Ambient influence based on time_of_day="Afternoon" (hot swing)
+    for i in range(50):
+        temperature[i] += 5.0 * np.sin(np.pi * (i / 50.0))
+
+    # Introduce a massive temperature spike starting at step 15 (visible immediately)
+    for i in range(15, 35):
         temperature[i] += 40.0  # Spike up to ~85
 
     return EnvironmentState(
@@ -25,12 +29,14 @@ def generate_easy_task() -> EnvironmentState:
         },
         system_metadata={
             "machine_type": "Pump",
-            "location": "Plant A, Sector 1"
+            "location": "Plant A, Sector 1",
+            "time_of_day": "Afternoon",
+            "normal_ranges": "temperature: 43-53C, pressure: 98-102, vibration: 0.3-0.7"
         },
         true_diagnosis="Cooling system failure",
         true_root_cause="Blocked coolant valve",
         true_recommended_action="Replace coolant valve and restart pump",
-        current_time_index=20,  # Agent starts observing before the spike
+        current_time_index=10,  # Agent starts with spike already in the window
         max_time_index=50,
         history=[],
         is_done=False,

@@ -12,88 +12,90 @@ tags:
 
 # IoT Fault Diagnosis — OpenEnv Environment
 
-## Description & Motivation
+## Overview
 
-Industrial machines (pumps, turbines, compressors) generate continuous streams of sensor data. When something goes wrong, engineers must correlate temperature, pressure, and vibration readings to identify the root cause before catastrophic failure occurs. This environment simulates that real-world diagnostic workflow.
+Industrial machines generate continuous sensor streams. When something goes wrong, engineers must correlate temperature, pressure, and vibration readings to identify the root cause before failure occurs. This environment simulates that diagnostic workflow as a sequential decision-making task for LLM agents.
 
-Agents must analyze time-series sensor data, decide when they have enough information, and produce a structured diagnosis — exactly as a human engineer would. This is a genuine evaluation task for LLM agents: it requires multi-step reasoning, uncertainty handling, and domain knowledge.
+Agents observe time-series sensor data, decide when they have enough evidence, and produce a structured diagnosis — requiring multi-step reasoning, uncertainty calibration, and domain knowledge under energy constraints.
 
 ## Observation Space
 
-Each observation contains:
-
 | Field | Type | Description |
 |---|---|---|
-| `timestamp` | float | Current time index in the simulation |
-| `sensor_data` | dict[str, list[float\|null]] | Time-series readings for `temperature`, `pressure`, `vibration`. Null encodes missing/dropped values. |
-| `system_metadata` | dict[str, str] | Machine type, location, `max_time_index`, `current_time_index` |
-| `history` | list[dict] | Previous actions taken this episode |
+| `timestamp` | float | Current time index |
+| `sensor_data` | dict[str, list[float\|null]] | Time-series for `temperature`, `pressure`, `vibration`. Null = missing/dropped values. |
+| `system_metadata` | dict[str, str] | Machine type, location, normal operating ranges, `current_time_index`, `max_time_index`, `energy_consumption`, `latency` |
+| `history` | list[dict] | Previous actions this episode |
 
 ## Action Space
 
-Two action types:
-
-| Action | Required Fields | Description |
+| Action | Fields | Cost |
 |---|---|---|
-| `request_data` | `action_type` | Advances the time window by 5 steps. Use to gather more sensor readings. |
-| `diagnose` | `action_type`, `diagnosis`, `root_cause`, `confidence` (0–1), `recommended_action`, `explanation` | Ends the episode. Graded against ground truth. |
+| `request_data` | `action_type` | 10 energy, advances time window +5 steps |
+| `tool_call('analyze')` | `action_type`, `tool_call` | 2 energy, returns mean/max/trend stats per sensor |
+| `tool_call('denoise_signal')` | `action_type`, `tool_call` | 8 energy, removes noise from readings |
+| `tool_call('set_sampling_rate')` | `action_type`, `tool_call`, `tool_params` | 1 energy, adjusts Hz |
+| `diagnose` | `action_type`, `diagnosis`, `root_cause`, `confidence`, `recommended_action`, `explanation` | 0 energy, terminal — ends episode |
 
 ## Tasks
 
-| Task | Machine | Fault | Difficulty |
+| Task | Machine | Anomaly | True Diagnosis |
 |---|---|---|---|
-| `easy` | Pump | Temperature spike at step 30–40, other sensors normal | Single-sensor reasoning |
-| `medium` | Gas Turbine | Vibration gradually increases from step 25, pressure drops from step 35 | Multi-sensor correlation |
-| `hard` | Centrifugal Compressor | 15% missing values, noisy spikes, vibration goes to exactly 0.0 at step 60 (severed sensor line from rotor seizure) | Ambiguous, noisy, missing data |
+| `normal` | Pump | None — all sensors flat within baseline | Normal Operation |
+| `easy` | Pump | Massive temperature spike (steps 15–35), pressure/vibration stable | Cooling system failure |
+| `medium` | Gas Turbine | Sustained linear pressure drift from step 10 | Pressure sensor drift |
+| `hard` | Centrifugal Compressor | Intermittent vibration spikes (15% missing values, noisy signal) | Intermittent electrical fault in vibration sensor |
 
 ## Reward Function
 
-- `request_data` when time_ratio < 0.8: `+0.01` (incremental progress reward)
-- `request_data` when time_ratio >= 0.8: `-0.05` (penalty for over-requesting)
-- `diagnose`: grader score in `[0.0, 1.0]` based on keyword overlap with ground truth
-- High confidence + wrong answer: `-0.2` penalty
-
-## Baseline Scores
-
-Rule-based baseline (`baseline.py`) using sensor heuristics:
-
-| Task | Score |
+| Event | Reward |
 |---|---|
-| easy | ~0.89 |
-| medium | ~0.89 |
-| hard | ~0.89 |
+| `request_data` at time_ratio < 0.8 | +0.01 |
+| `request_data` at time_ratio 0.8–1.0 | -0.05 |
+| `request_data` past max_time_index | -0.10 |
+| `diagnose` | grader score [0.0, 1.0] − (energy_used × 0.005) |
+| High confidence + wrong answer (confidence ≥ 0.8, score < 0.3) | −0.20 |
 
-LLM baseline (`inference.py`) using `Qwen/Qwen2.5-72B-Instruct` via HF router:
+The energy penalty means diagnosing at 20 energy costs 0.10 points, while diagnosing at 80 energy costs 0.40 points. Efficient agents score significantly higher.
 
-| Task | Score |
-|---|---|
-| easy | 0.98 |
-| medium | 0.71 |
-| hard | 0.99 |
+## Grader
 
-## Setup & Usage
+Diagnosis quality is evaluated by an LLM judge (Groq) scoring Accuracy, Root Cause, and Reasoning on a 1–5 scale, normalized to [0, 1]. A keyword-overlap fallback activates if the LLM judge is unavailable. Synonym groups ensure "thermal fault" and "cooling system failure" score equivalently.
+
+## LLM Agent Results
+
+Using `meta-llama/llama-4-scout-17b-16e-instruct` via Groq:
+
+| Task | Steps | Energy Used | Score |
+|---|---|---|---|
+| normal | 4 | 14 | 0.68 |
+| easy | 5 | 24 | 0.63 |
+| medium | 8 | 46 | 0.52 |
+| hard | 4 | 22 | 0.64 |
+
+## Setup
 
 **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Set environment variables:**
-```bash
-export HF_TOKEN="your_huggingface_token"
-export LLM_BASE_URL="https://router.huggingface.co/v1"
-export MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"
-export API_BASE_URL="http://localhost:7860"
+**Configure `.env`:**
+```
+GROQ_API_KEY=your_groq_api_key
+API_BASE_URL=https://api.groq.com/openai/v1
+MODEL_NAME=meta-llama/llama-4-scout-17b-16e-instruct
+ENV_URL=http://localhost:7860
 ```
 
-**Start the environment server** (Terminal 1):
+**Start the environment server:**
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 7860
+python -m uvicorn app:app --host 0.0.0.0 --port 7860
 ```
 
-**Run LLM inference** (Terminal 2):
+**Run the agent:**
 ```bash
-python inference.py
+python inference.py --scenario scenario_config.json
 ```
 
 **Run rule-based baseline:**
@@ -113,24 +115,27 @@ docker run -p 7860:7860 iot-fault-env
 | Method | Endpoint | Description |
 |---|---|---|
 | GET/POST | `/reset?task_name=easy` | Reset environment, returns initial observation |
-| POST | `/step` | Submit an action, returns observation + reward + done + info |
-| GET | `/state` | Returns full current environment state |
-| GET | `/tasks` | Lists available task names |
+| POST | `/step` | Submit action, returns observation + reward + done + info |
+| GET | `/state` | Full current environment state |
+| GET | `/tasks` | List available task names |
+| POST | `/grader` | Run grader directly on an action + state |
 
 ## Project Structure
 
 ```
-├── app.py          # FastAPI server
-├── env.py          # IoTEnvironment class (step/reset/state)
-├── models.py       # Pydantic models (Observation, Action, Reward, EnvironmentState)
-├── grader.py       # Programmatic grader with synonym-aware scoring
-├── inference.py    # LLM baseline using OpenAI client + HF_TOKEN
-├── baseline.py     # Rule-based baseline
-├── openenv.yaml    # OpenEnv metadata
-├── Dockerfile      # Container definition
+├── app.py                  # FastAPI server
+├── env.py                  # IoTEnvironment (step/reset logic, energy tracking)
+├── models.py               # Pydantic models (Observation, Action, Reward, EnvironmentState)
+├── grader.py               # LLM judge + keyword fallback grader
+├── inference.py            # LLM agent (OpenAI-compatible client, Groq backend)
+├── baseline.py             # Rule-based baseline
+├── scenario_config.json    # Task sequence, max steps, system prompt
+├── openenv.yaml            # OpenEnv metadata
+├── Dockerfile
 ├── requirements.txt
 └── tasks/
-    ├── easy.py
-    ├── medium.py
-    └── hard.py
+    ├── normal.py           # Healthy baseline — no anomalies
+    ├── easy.py             # Temperature spike fault
+    ├── medium.py           # Pressure sensor drift
+    └── hard.py             # Intermittent vibration electrical fault
 ```

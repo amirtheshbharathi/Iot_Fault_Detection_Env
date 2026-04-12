@@ -1,11 +1,13 @@
 from .easy import generate_easy_task
 from .medium import generate_medium_task
 from .hard import generate_hard_task
+from .normal import generate_normal_task
 
 TASKS = {
     "easy": generate_easy_task,
     "medium": generate_medium_task,
-    "hard": generate_hard_task
+    "hard": generate_hard_task,
+    "normal": generate_normal_task
 }
 
 def get_task(task_name: str):
