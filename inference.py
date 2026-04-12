@@ -12,8 +12,9 @@ load_dotenv()
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/llama-4-scout-17b-16e-instruct")
-# Validator injects API_KEY — always prefer it over local credentials
-API_KEY = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("HF_TOKEN")
+# Support all validator-injected key names — OPENAI_API_KEY takes priority per spec
+API_KEY = (os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or
+           os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY"))
 ENV_URL = os.getenv("ENV_URL", "http://localhost:7860")
 BENCHMARK = "iot_fault_env"
 
@@ -405,19 +406,20 @@ def run_task(client: OpenAI, task: str, config: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run OpenEnv agent inference.")
-    parser.add_argument("--scenario", type=str, required=True, help="Path to scenario JSON config file")
+    parser.add_argument("--scenario", type=str, default="scenario_config.json",
+                        help="Path to scenario JSON config file")
     args = parser.parse_args()
 
     with open(args.scenario, "r", encoding="utf-8") as f:
         config = json.load(f)
 
     if not API_KEY:
-        print("Error: API_KEY or HF_TOKEN environment variable is not set.", flush=True)
+        print("Error: No API key found. Set OPENAI_API_KEY, API_KEY, HF_TOKEN, or GROQ_API_KEY.", flush=True)
         return
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    for task in config.get("task_sequence", ["easy", "medium", "hard"]):
+    for task in config.get("task_sequence", ["normal", "easy", "medium", "hard"]):
         run_task(client, task, config)
 
 

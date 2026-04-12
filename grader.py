@@ -77,8 +77,9 @@ def evaluate_action_fallback(action: Action, state: EnvironmentState) -> GraderR
 def evaluate_action(action: Action, state: EnvironmentState) -> GraderResult:
     try:
         api_base = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
-        # Validator injects API_KEY — always prefer it over local credentials
-        api_key = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("HF_TOKEN")
+        # Support all validator-injected key names
+        api_key = (os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or
+                   os.getenv("GROQ_API_KEY") or os.getenv("HF_TOKEN"))
         model_name = os.getenv("MODEL_NAME", "meta-llama/llama-4-scout-17b-16e-instruct")
         
         if not api_key:

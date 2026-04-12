@@ -4,12 +4,14 @@ description: "Simulates industrial machines with sensor streams for fault diagno
 category: "fault_diagnosis"
 author: "openenv-submission"
 tasks:
+  - id: "normal"
+    description: "Healthy baseline pump — all sensors flat within normal ranges. Agent must correctly identify Normal Operation without false alarms."
   - id: "easy"
-    description: "Clear anomaly (temperature spike), single-sensor reasoning. Agent must identify cooling system failure."
+    description: "Clear temperature spike (steps 15-35) on a pump while pressure and vibration remain stable. Agent must identify Cooling system failure."
   - id: "medium"
-    description: "Multi-sensor interaction requiring correlation reasoning. Vibration increase followed by pressure drop indicates bearing degradation."
+    description: "Sustained linear pressure drift on a Gas Turbine starting from step 10. Agent must identify Pressure sensor drift due to calibration decay."
   - id: "hard"
-    description: "Missing values, noisy/conflicting signals, ambiguous fault. Rotor seizure with severed vibration sensor line."
+    description: "Intermittent vibration spikes on a Centrifugal Compressor with 15% missing values and noisy signals. Agent must identify Intermittent electrical fault in vibration sensor."
 api:
   port: 7860
   endpoints:
@@ -20,10 +22,10 @@ api:
     grader: "/grader"
 observation_space:
   type: "dict"
-  description: "Time-series sensor readings (temperature, pressure, vibration), system metadata, and action history."
+  description: "Time-series sensor readings (temperature, pressure, vibration), system metadata including normal_ranges, energy_consumption, latency, and action history."
 action_space:
   type: "dict"
-  description: "Either request_data to advance time index, or diagnose with diagnosis, root_cause, confidence, recommended_action, explanation."
+  description: "request_data (advance time window), tool_call (analyze/denoise_signal/set_sampling_rate), or diagnose (terminal — submit diagnosis with all required fields)."
 reward_range: [0.0, 1.0]
 metadata:
   observation_type: "timeseries"
