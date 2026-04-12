@@ -76,11 +76,9 @@ def evaluate_action_fallback(action: Action, state: EnvironmentState) -> GraderR
 
 def evaluate_action(action: Action, state: EnvironmentState) -> GraderResult:
     try:
-        api_base = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
-        # Support all validator-injected key names
-        api_key = (os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or
-                   os.getenv("GROQ_API_KEY") or os.getenv("HF_TOKEN"))
-        model_name = os.getenv("MODEL_NAME", "meta-llama/llama-4-scout-17b-16e-instruct")
+        api_base = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+        api_key = os.getenv("HF_TOKEN")
+        model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
         
         if not api_key:
             raise ValueError("No API key provided.")

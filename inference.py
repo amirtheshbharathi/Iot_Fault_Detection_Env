@@ -10,11 +10,9 @@ from openai import OpenAI
 
 load_dotenv()
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/llama-4-scout-17b-16e-instruct")
-# Support all validator-injected key names — OPENAI_API_KEY takes priority per spec
-API_KEY = (os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or
-           os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY"))
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
 ENV_URL = os.getenv("ENV_URL", "http://localhost:7860")
 BENCHMARK = "iot_fault_env"
 
@@ -413,11 +411,11 @@ def main() -> None:
     with open(args.scenario, "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    if not API_KEY:
-        print("Error: No API key found. Set OPENAI_API_KEY, API_KEY, HF_TOKEN, or GROQ_API_KEY.", flush=True)
+    if not HF_TOKEN:
+        print("Error: HF_TOKEN environment variable is not set.", flush=True)
         return
 
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
     for task in config.get("task_sequence", ["normal", "easy", "medium", "hard"]):
         run_task(client, task, config)
